@@ -1,139 +1,130 @@
-import React from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { LockKeyhole, ShieldCheck, Sparkles, User2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Sparkles, KeyRound, Mail, ShieldCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-export default function Login({
-  onSubmit,
-  email,
-  setEmail,
-  password,
-  setPassword,
-  name,
-  setName,
-  mode,
-  setMode,
-  error,
-  submitting,
-}) {
-  const [searchParams] = useSearchParams();
-  const role = searchParams.get('role') || 'user';
-  const isAdmin = role === 'admin';
+const Login = () => {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!email || !password) {
+      setError('⚡ ACCESS DENIED: PLEASE FILL OUT ALL AUTHENTICATION GATES.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    // Simulate interactive authentication delay
+    setTimeout(() => {
+      setIsSubmitting(false);
+      // Add real auth logic here
+      navigate('/admin'); 
+    }, 1200);
+  };
 
   return (
-    <section className="mx-auto flex min-h-[78vh] max-w-7xl items-center justify-center px-5 py-20 sm:px-8">
-      <div className="grid w-full gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="glass-panel p-8 sm:p-10">
-          <p className="font-mono text-xs uppercase tracking-[0.35em] text-cyan-300">
-            // {isAdmin ? 'ADMIN ACCESS' : 'USER ACCESS'}
-          </p>
-          <h1 className="mt-4 text-4xl font-semibold text-white sm:text-5xl">
-            {isAdmin ? 'Admin sign in' : mode === 'register' ? 'Create your account' : 'User sign in'}
-          </h1>
-          <p className="mt-4 max-w-xl text-base leading-8 text-slate-400">
-            {isAdmin
-              ? 'Log in as admin to publish and manage content across the BUCC Study Corner library. New admin accounts must be provisioned out-of-band by an existing administrator.'
-              : mode === 'register'
-              ? 'Register a learner account to access the dashboard and play videos directly inside the portal.'
-              : 'Log in as a learner to access the public dashboard and play videos directly inside the portal.'}
-          </p>
+    <div className="min-h-screen bg-[#090814] bg-[radial-gradient(#1a182e_1.5px,transparent_1.5px)] [background-size:24px_24px] flex flex-col items-center justify-center p-4 font-sans text-white selection:bg-[#f3d371] selection:text-[#090814]">
+      
+      {/* Back Button */}
+      <button 
+        onClick={() => navigate('/')} 
+        className="group flex items-center gap-2 text-gray-400 hover:text-[#5ce1e6] transition-all duration-300 mb-8 text-[10px] font-black tracking-[0.2em] uppercase cursor-pointer"
+      >
+        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+        Return to Portal
+      </button>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <p className="mt-3 font-semibold text-white">Secure experience</p>
-              <p className="mt-1 text-sm text-slate-400">JWT-based auth keeps admin actions separate from learners.</p>
+      {/* Interactive Form Container */}
+      <div className="relative w-full max-w-md group/card">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#7c83fd] to-[#fbc5b3] rounded-2xl translate-x-2 translate-y-2 opacity-20 group-hover/card:translate-x-3 group-hover/card:translate-y-3 transition-transform duration-500 -z-10 blur-[8px]"></div>
+        
+        <div className="w-full bg-[#121122] border-2 border-[#2b2a42] rounded-2xl p-8 md:p-10 shadow-2xl">
+          
+          {/* Header */}
+          <div className="text-center mb-8 relative">
+            <div className="mx-auto w-12 h-12 flex items-center justify-center rounded-2xl bg-[#1b1935] border border-[#2b2a42] text-[#fbc5b3] mb-4">
+              <ShieldCheck size={24} />
             </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <p className="mt-3 font-semibold text-white">Instant access</p>
-              <p className="mt-1 text-sm text-slate-400">Enter your credentials and continue into your assigned workspace.</p>
-            </div>
+            <h1 className="text-3xl font-black tracking-tighter text-white drop-shadow-md">
+              ADMIN ACCESS
+            </h1>
+            <p className="text-gray-400 text-[11px] font-bold mt-2 tracking-[0.2em] uppercase">
+              Authenticate internal administrative systems.
+            </p>
           </div>
 
-          {!isAdmin ? (
-            <div className="mt-8 flex items-center gap-3 text-sm text-slate-400">
-              <button
-                type="button"
-                onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-                className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-cyan-400/30 hover:text-cyan-200"
-              >
-                {mode === 'login' ? 'Need an account? Register' : 'Already registered? Sign in'}
-              </button>
+          {/* Validation Alert */}
+          {error && (
+            <div className="mb-6 p-3.5 bg-red-950/40 border-2 border-red-500/30 rounded-xl text-red-400 text-[10px] font-black text-center tracking-widest uppercase">
+              {error}
             </div>
-          ) : null}
-        </div>
+          )}
 
-        <div className="glass-panel p-8 sm:p-10">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-400/10 text-cyan-300">
-              {isAdmin ? <LockKeyhole className="h-5 w-5" /> : <User2 className="h-5 w-5" />}
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-black tracking-[0.2em] text-[#5ce1e6] uppercase pl-1">
+                Email Address
+              </label>
+              <div className="relative group/input">
+                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within/input:text-[#7c83fd] transition-colors" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@bucc.edu"
+                  className="w-full bg-[#090814] border-2 border-[#222138] rounded-xl pl-12 pr-4 py-3.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-[#7c83fd] focus:ring-4 focus:ring-[#7c83fd]/10 transition-all duration-300 font-bold"
+                />
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-white">
-                {isAdmin ? 'Enter your details' : mode === 'register' ? 'Create your account' : 'Enter your details'}
-              </h2>
-              <p className="text-sm text-slate-400">
-                Role: {isAdmin ? 'Admin' : 'User'} portal — {mode === 'register' ? 'Registration' : 'Sign in'}
-              </p>
-            </div>
-          </div>
 
-          <form onSubmit={(event) => onSubmit(event, role)} className="mt-8 space-y-4">
-            {mode === 'register' && !isAdmin ? (
-              <input
-                type="text"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Your name"
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-500"
-                required
-              />
-            ) : null}
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder={isAdmin ? 'admin@bucc.com' : 'your.email@example.com'}
-              className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-500"
-              required
-            />
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="password"
-              className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-500"
-              required
-              minLength={6}
-            />
-            {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-black tracking-[0.2em] text-[#fbc5b3] uppercase pl-1">
+                Security Key
+              </label>
+              <div className="relative group/input">
+                <KeyRound size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within/input:text-[#7c83fd] transition-colors" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-[#090814] border-2 border-[#222138] rounded-xl pl-12 pr-4 py-3.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-[#7c83fd] focus:ring-4 focus:ring-[#7c83fd]/10 transition-all duration-300"
+                />
+              </div>
+            </div>
+
+            {/* Submit Button */}
             <button
               type="submit"
-              disabled={submitting}
-              className="w-full rounded-full bg-gradient-to-r from-cyan-400 to-indigo-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSubmitting}
+              className="w-full mt-4 bg-[#f3d371] hover:bg-[#fcdfa3] text-[#090814] font-black text-xs tracking-[0.3em] uppercase py-5 rounded-xl border-2 border-black shadow-[0_8px_24px_rgba(243,211,113,0.2)] transition-all duration-300 hover:-translate-y-1 active:translate-y-0 disabled:opacity-50 cursor-pointer"
             >
-              {submitting ? 'Working…' : isAdmin ? `Continue as admin` : mode === 'register' ? 'Create account' : 'Continue as user'}
+              {isSubmitting ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-[#090814] border-t-transparent rounded-full animate-spin"></div>
+                  INITIALIZING...
+                </div>
+              ) : (
+                'INITIATE ACCESS'
+              )}
             </button>
           </form>
 
-          <p className="mt-6 text-xs text-slate-500">
-            By {mode === 'register' ? 'registering' : 'signing in'} you agree to use this portal for learning purposes only.
+          <p className="mt-8 text-center text-[9px] text-gray-600 font-bold tracking-[0.15em] uppercase">
+            Authorized personnel only. Logs monitored.
           </p>
-          {!isAdmin ? (
-            <p className="mt-2 text-xs text-slate-500">
-              Looking for the admin portal?{' '}
-              <Link to="/login?role=admin" className="text-cyan-300 hover:text-cyan-200">
-                Sign in here
-              </Link>
-              .
-            </p>
-          ) : null}
         </div>
       </div>
-    </section>
+    </div>
   );
-}
+};
+
+export default Login;

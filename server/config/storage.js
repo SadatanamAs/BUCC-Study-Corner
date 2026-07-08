@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { envOrEmpty } from './env.js';
 
 const memoryUsers = [];
 const memoryVideos = [];
@@ -21,7 +22,7 @@ async function ensureSeedData() {
  * server fails fast at startup in production when MONGO_URI is missing.
  */
 export function isMemoryStoreEnabled() {
-  return !process.env.MONGO_URI;
+  return !envOrEmpty('MONGO_URI');
 }
 
 export async function findMemoryUserByEmail(email) {

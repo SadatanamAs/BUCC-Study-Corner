@@ -1,12 +1,13 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { findMemoryUserById, isMemoryStoreEnabled } from '../config/storage.js';
+import { envOrEmpty, isProd } from '../config/env.js';
 
 // Mirror the production guard from authController. Keep these in sync.
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+const JWT_SECRET = envOrEmpty('JWT_SECRET');
+if (!JWT_SECRET && isProd()) {
   throw new Error('JWT_SECRET environment variable is required in production');
 }
-const JWT_SECRET = process.env.JWT_SECRET;
 
 // Protect routes - Verify JWT token
 export const protect = async (req, res, next) => {

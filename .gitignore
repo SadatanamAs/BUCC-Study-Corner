@@ -1,20 +1,101 @@
-# Dependency directories
+# =============================================================================
+# Dependencies
+# =============================================================================
 node_modules/
-/jspm_packages/
-/web_archiver/
-server/package-lock.json
+jspm_packages/
+web_archiver/
+.pnp
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
 
-.env
-
+# =============================================================================
+# Build outputs
+# =============================================================================
 dist/
 build/
 .next/
 out/
+.cache/
+.tmp/
+.parcel-cache/
+.vite/
+*.tsbuildinfo
 
-# IDE / Editors
+# =============================================================================
+# Testing & coverage
+# =============================================================================
+coverage/
+.nyc_output/
+*.lcov
+
+# =============================================================================
+# Logs
+# =============================================================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =============================================================================
+# Environment files (DO commit .env.example — it is documentation only)
+# =============================================================================
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+
+# =============================================================================
+# Editor / IDE
+# =============================================================================
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+.history/
+*.iml
 
-
+# =============================================================================
+# OS
+# =============================================================================
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 
+# =============================================================================
+# Vercel (each project has its own .vercel dir for CLI auth — never commit)
+# =============================================================================
+.vercel/
+
+# =============================================================================
+# Misc
+# =============================================================================
+*.tgz
+*.tar.gz
+*.zip
+*.pid
+*.seed
+*.pid.lock
+
+.eslintcache
+.stylelintcache
+.prettiercache
+
+# Local Netlify / Vercel / Firebase emulator state
+.netlify/
+.firebase/
+
+# Backup / swap files
+*.bak
+*.tmp
+*.orig

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Clock3, PlayCircle, Sparkles } from 'lucide-react';
-
-const STORAGE_KEY = 'study-corner-videos';
+import { loadVideos } from '../lib/videos.js';
 
 function getYouTubeId(url) {
   try {
@@ -27,16 +26,15 @@ export default function Course() {
   const [video, setVideo] = useState(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        const match = parsed.find((item) => item.id === id) || parsed[0];
-        setVideo(match || null);
-      } catch {
-        setVideo(null);
-      }
-    }
+    let cancelled = false;
+    loadVideos().then((list) => {
+      if (cancelled) return;
+      const match = list.find((item) => item.id === id) || list[0];
+      setVideo(match || null);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   if (!video) {

@@ -3,7 +3,7 @@ import { ArrowRight, BookOpen, BrainCircuit, Code2, Heart, Search, Sparkles, Zap
 import Category from '../components/Category.jsx';
 import VideoCard from '../components/VideoCard.jsx';
 import PlayerOverlay from '../components/PlayerOverlay.jsx';
-import { getVideos } from '../lib/videos.js';
+import { loadVideos } from '../lib/videos.js';
 
 export default function Dashboard() {
   const [videos, setVideos] = useState([]);
@@ -16,12 +16,17 @@ export default function Dashboard() {
   const [topicFavorites, setTopicFavorites] = useState([]);
 
   useEffect(() => {
-    const stored = getVideos();
-    setVideos(stored);
+    let cancelled = false;
+    loadVideos().then((list) => {
+      if (!cancelled) setVideos(list);
+    });
     const storedFavorites = JSON.parse(localStorage.getItem('bucc-favorites') || '[]');
     setFavorites(storedFavorites);
     const storedTopicFavorites = JSON.parse(localStorage.getItem('bucc-topic-favorites') || '[]');
     setTopicFavorites(storedTopicFavorites);
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const toggleFavorite = (id) => {

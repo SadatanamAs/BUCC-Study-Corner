@@ -1,134 +1,162 @@
 /**
- * api.js
- * Data layer for BUCC Study Corner's frontend.
+ * api.js — data layer for the deployed BUCC Study Corner frontend.
  *
- * Scope: this file only talks to the backend (or falls back to mock data)
- * and hands back a NORMALIZED video shape, regardless of exactly what
- * field names the backend team ends up using. That way App.jsx and any
- * consuming component never has to guard against raw.title vs raw.name,
- * raw.url vs raw.videoUrl, etc.
+ * Reads the backend URL from `VITE_API_BASE_URL` (set in
+ * `.env.local` for dev or the Vercel project env vars for prod).
  *
- * Normalized video shape:
- * {
- *   id: string,
- *   title: string,
- *   url: string,          // full YouTube link
- *   category: string,     // e.g. "Frontend" | "Backend" | "Design"
- *   channel: string,      // optional, empty string if unknown
- *   description: string,  // optional, empty string if unknown
- * }
+ * Public surface:
+ *   - loginUser({ email, password }) → { token, user }
+ *   - registerUser({ name, email, password }) → { token, user }
+ *   - fetchVideos() → Video[]
+ *   - createVideo(video) → Video
+ *   - deleteVideo(id) → { message }
+ *   - upgradeToAdmin({ email, bootstrapToken }) → { message, user }
+ *
+ * Token handling: callers (auth.js, components) are responsible for
+ * storing the JWT in localStorage. This module injects it via the
+ * `Authorization: Bearer <token>` header on protected calls.
  */
 
 const API_BASE_URL =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
   'http://localhost:5000/api';
 
-/**
- * Low-level fetch wrapper with consistent error handling.
- */
-async function request(path, options = {}) {
+function authHeaders(token) {
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
+}
+
+async function request(path, { method = 'GET', body, token } = {}) {
   const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(token),
+    },
+    body: body ? JSON.stringify(body) : undefined,
   });
 
+  let payload = null;
+  try {
+    payload = await res.json();
+  } catch {
+    // non-JSON response
+  }
+
   if (!res.ok) {
-    let message = `Request to ${path} failed with status ${res.status}`;
-    try {
-      const body = await res.json();
-      if (body?.message) message = body.message;
-    } catch {
-      // response wasn't JSON, keep default message
-    }
+    const message = payload?.message || `Request to ${path} failed (${res.status})`;
     throw new Error(message);
   }
 
-  return res.json();
+  return payload;
 }
 
-/**
- * Maps whatever shape the backend returns for a single video into the
- * normalized shape this frontend relies on. Tolerant of common naming
- * variants so this doesn't break the moment the backend contract shifts.
- */
-export function normalizeVideo(raw = {}) {
+export async function loginUser({ email, password }) {
+  const data = await request('/auth/login', {
+    method: 'POST',
+    body: { email, password },
+  });
   return {
-    id: raw.id ?? raw._id ?? raw.videoId ?? cryptoRandomId(),
-    title: raw.title ?? raw.name ?? 'Untitled video',
-    url: raw.url ?? raw.videoUrl ?? raw.link ?? raw.youtubeUrl ?? '',
-    category: raw.category ?? raw.tag ?? raw.topic ?? 'General',
-    channel: raw.channel ?? raw.author ?? raw.uploader ?? '',
-    description: raw.description ?? raw.desc ?? '',
+    token: data.token,
+    user: {
+      _id: data._id,
+      name: data.name,
+      email: data.email,
+      role: data.role,
+    },
   };
 }
 
-function cryptoRandomId() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-  return `video-${Math.random().toString(36).slice(2, 10)}`;
+export async function registerUser({ name, email, password }) {
+  const data = await request('/auth/register', {
+    method: 'POST',
+    body: { name, email, password },
+  });
+  return {
+    token: data.token,
+    user: {
+      _id: data._id,
+      name: data.name,
+      email: data.email,
+      role: data.role,
+    },
+  };
 }
 
-/**
- * Fetches videos, optionally filtered by category.
- * Tolerant of the backend responding with a bare array, or an object
- * like { videos: [...] } / { data: [...] }.
- *
- * @param {string} [category] - pass "All" or omit for no filter
- * @returns {Promise<Array>} normalized video list
- */
-export async function fetchVideos(category) {
-  const query = category && category !== 'All' ? `?category=${encodeURIComponent(category)}` : '';
-  const data = await request(`/videos${query}`);
+export async function fetchVideos() {
+  const data = await request('/videos');
   const list = Array.isArray(data) ? data : data?.videos ?? data?.data ?? [];
+
+  // Normalize the backend's { title, youtubeId, category, tags, ... }
+  // into the { id, title, url, category, channel, description, duration, instructor }
+  // shape that the existing UI components (VideoCard, PlayerOverlay, etc.) consume.
   return list.map(normalizeVideo);
 }
 
-/**
- * Fetches the list of category names. Falls back to a sane default set
- * if the backend doesn't expose a /categories endpoint yet.
- *
- * @returns {Promise<string[]>}
- */
-export async function fetchCategories() {
-  try {
-    const data = await request('/categories');
-    const list = Array.isArray(data) ? data : data?.categories ?? data?.data ?? [];
-    const names = list.map((c) => (typeof c === 'string' ? c : c.name ?? c.category));
-    return names.length ? ['All', ...names] : FALLBACK_CATEGORIES;
-  } catch {
-    return FALLBACK_CATEGORIES;
-  }
+export async function createVideo(video, token) {
+  const data = await request('/videos', {
+    method: 'POST',
+    token,
+    body: {
+      title: video.title,
+      youtubeId: extractYouTubeId(video.url) || video.youtubeId,
+      category: video.category || 'General',
+      tags: video.tags || [],
+    },
+  });
+  return normalizeVideo(data);
 }
 
-export const FALLBACK_CATEGORIES = ['All', 'Frontend', 'Backend', 'Design'];
+export async function deleteVideo(id, token) {
+  return request(`/videos/${id}`, { method: 'DELETE', token });
+}
 
-/**
- * Sample data for developing/demoing VideoCard and Category without a
- * live backend. Not used automatically — import it explicitly, e.g.
- * for a Storybook-style preview or while the API endpoint isn't ready.
- */
-export const MOCK_VIDEOS = [
-  {
-    id: 'mock-1',
-    title: 'React Hooks in 15 Minutes',
-    url: 'https://www.youtube.com/watch?v=dpw9EHDh2bM',
-    category: 'Frontend',
-    channel: 'Web Dev Simplified',
-    description: 'A fast walkthrough of useState and useEffect for beginners.',
-  },
-  {
-    id: 'mock-2',
-    title: 'Building REST APIs with Express',
-    url: 'https://www.youtube.com/watch?v=pKd0Rpw7O48',
-    category: 'Backend',
-    channel: 'Traversy Media',
-    description: 'Set up routes, middleware, and JSON responses from scratch.',
-  },
-  {
-    id: 'mock-3',
-    title: 'Design Systems 101',
-    url: 'https://youtu.be/R2Bp9NyBWwc',
-    category: 'Design',
-    channel: 'Figma',
-    description: 'Why consistent tokens and components matter at scale.',
-  },
-];
+export async function upgradeToAdmin({ email, bootstrapToken }) {
+  return request('/auth/upgrade-admin', {
+    method: 'POST',
+    body: { email },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-bootstrap-token': bootstrapToken,
+    },
+  });
+}
+
+// -------- helpers --------
+
+function normalizeVideo(raw = {}) {
+  const id = raw.id ?? raw._id ?? raw.videoId ?? String(Date.now());
+  const youtubeId = raw.youtubeId ?? raw.youtube_id ?? null;
+  const url = raw.url ?? raw.videoUrl ?? raw.link ?? (youtubeId ? `https://www.youtube.com/watch?v=${youtubeId}` : '');
+
+  return {
+    id,
+    title: raw.title ?? raw.name ?? 'Untitled video',
+    url,
+    category: raw.category ?? raw.tag ?? 'General',
+    channel: raw.channel ?? raw.author ?? '',
+    description: raw.description ?? raw.desc ?? '',
+    duration: raw.duration ?? '',
+    instructor: raw.instructor ?? raw.postedBy?.name ?? '',
+    tags: raw.tags ?? [],
+    postedBy: raw.postedBy ?? null,
+    createdAt: raw.createdAt ?? null,
+  };
+}
+
+export function extractYouTubeId(url = '') {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.includes('youtube.com')) {
+      return parsed.searchParams.get('v');
+    }
+    if (parsed.hostname.includes('youtu.be')) {
+      return parsed.pathname.slice(1);
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export { API_BASE_URL };

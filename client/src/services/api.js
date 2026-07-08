@@ -30,15 +30,26 @@ function authHeaders(token) {
 }
 
 async function request(path, { method = 'GET', body, token, headers = {} } = {}) {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders(token),
-      ...headers,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders(token),
+        ...headers,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (networkErr) {
+    // Fetch itself throws (CORS preflight failure, DNS, offline, TLS error).
+    // The browser usually exposes a fairly cryptic message here — rewrite it
+    // so the user knows it's likely a connection / deployment issue, not bad
+    // credentials. The previous form said "FAILED TO FETCH" with no context.
+    throw new Error(
+      `Network error contacting the API at ${API_BASE_URL}. Hard-refresh (Cmd/Ctrl+Shift+R) to drop a stale cached bundle, then retry. If the problem persists, the backend may be down or this build's VITE_API_BASE_URL may be wrong.`
+    );
+  }
 
   let payload = null;
   try {

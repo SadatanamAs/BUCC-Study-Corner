@@ -66,13 +66,18 @@ export default function App() {
     setSubmitting(true);
     try {
       if (mode === 'register') {
-        // Only forward the bootstrap key when the user explicitly chose the
-        // admin path *and* an operator configured VITE_ADMIN_BOOTSTRAP_KEY for
-        // this deployment. This way the bootstrap token never appears in the
-        // public bundle for a learner-facing deployment.
+        // Admin bootstrap key precedence:
+        //   1. The form field the user typed on the admin register screen
+        //      (lets operators paste a key without rebuilding the bundle).
+        //   2. VITE_ADMIN_BOOTSTRAP_KEY baked in at build time, when set.
+        // If neither is provided on the admin register path, the server
+        // silently creates a regular user — we detect that below and tell
+        // the user instead of sending them to /admin as a non-admin.
+        const form = event.target;
+        const typedKey = form?.elements?.superSecretKey?.value?.trim();
         let superSecretKey;
-        if (desiredRole === 'admin' && BOOTSTRAP_KEY) {
-          superSecretKey = BOOTSTRAP_KEY;
+        if (desiredRole === 'admin') {
+          superSecretKey = typedKey || BOOTSTRAP_KEY || undefined;
         }
 
         const result = await registerWithBackend({ name, email, password, superSecretKey });
@@ -80,7 +85,7 @@ export default function App() {
         if (desiredRole === 'admin' && result.user.role !== 'admin') {
           clearSession();
           setError(
-            'This account was created as a regular user. The admin bootstrap key is not configured for this deployment — contact an existing admin.'
+            'This account was created as a regular user. The admin bootstrap key is not configured for this deployment — paste the secret key on the register form, or contact an existing admin.'
           );
           return;
         }

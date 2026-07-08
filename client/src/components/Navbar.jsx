@@ -39,7 +39,7 @@ export default function Navbar({ session, onLogout }) {
                 Dashboard
               </NavLink>
             ) : null}
-            {session?.role === 'admin' ? (
+            {session?.user?.role === 'admin' ? (
               <NavLink to="/admin" className={({ isActive }) => `${linkBase} ${isActive ? linkActive : linkInactive}`}>
                 Admin
               </NavLink>
@@ -82,7 +82,7 @@ export default function Navbar({ session, onLogout }) {
                 Dashboard
               </NavLink>
             ) : null}
-            {session?.role === 'admin' ? (
+            {session?.user?.role === 'admin' ? (
               <NavLink to="/admin" className={({ isActive }) => `${linkBase} ${isActive ? linkActive : linkInactive}`}>
                 Admin
               </NavLink>

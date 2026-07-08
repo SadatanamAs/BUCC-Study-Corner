@@ -1,4 +1,20 @@
+# Dependency directories
 node_modules/
+/jspm_packages/
+/web_archiver/
+server/package-lock.json
+
 .env
+
 dist/
+build/
+.next/
+out/
+
+# IDE / Editors
+.vscode/
+
+
 .DS_Store
+Thumbs.db
+

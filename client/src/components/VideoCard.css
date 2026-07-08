@@ -1,0 +1,143 @@
+@import './tokens.css';
+
+.vc-card {
+  background: var(--sc-paper);
+  border: 1px solid var(--sc-line);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  font-family: var(--sc-font-body);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vc-card:hover,
+.vc-card:focus-visible {
+  transform: translateY(-4px) rotate(-0.3deg);
+  box-shadow: 0 10px 24px -8px rgba(28, 43, 57, 0.35);
+}
+
+.vc-card:focus-visible {
+  outline: 2px solid var(--sc-gold);
+  outline-offset: 2px;
+}
+
+.vc-thumb-wrap {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--sc-paper-dark);
+  overflow: hidden;
+}
+
+.vc-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.35s ease;
+}
+
+.vc-card:hover .vc-thumb {
+  transform: scale(1.06);
+}
+
+.vc-thumb--empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sc-ink);
+  font-family: var(--sc-font-mono);
+  font-size: 0.75rem;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+.vc-tab {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: var(--sc-rust);
+  color: var(--sc-paper);
+  font-family: var(--sc-font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.28rem 0.65rem 0.32rem 0.55rem;
+  border-bottom-right-radius: 8px;
+}
+
+.vc-tab[data-category='Backend'] {
+  background: var(--sc-teal);
+}
+
+.vc-tab[data-category='Design'] {
+  background: var(--sc-gold);
+  color: var(--sc-ink);
+}
+
+.vc-play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sc-paper);
+  background: rgba(28, 43, 57, 0);
+  opacity: 0;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.vc-card:hover .vc-play-overlay,
+.vc-card:focus-visible .vc-play-overlay {
+  opacity: 1;
+  background: rgba(28, 43, 57, 0.25);
+}
+
+.vc-play-overlay svg {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+.vc-body {
+  padding: 0.85rem 1rem 1rem;
+}
+
+.vc-title {
+  margin: 0 0 0.25rem;
+  font-family: var(--sc-font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  line-height: 1.3;
+  color: var(--sc-ink);
+}
+
+.vc-channel {
+  margin: 0 0 0.35rem;
+  font-family: var(--sc-font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sc-teal);
+}
+
+.vc-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--sc-ink);
+  opacity: 0.75;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vc-card,
+  .vc-thumb,
+  .vc-play-overlay {
+    transition: none;
+  }
+  .vc-card:hover {
+    transform: none;
+  }
+}

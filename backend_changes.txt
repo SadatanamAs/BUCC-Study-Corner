@@ -1,0 +1,75 @@
+================================================================================
+STUDY CORNER - BACKEND ARCHITECTURE & SECURITY SUMMARY
+================================================================================
+
+This file contains a breakdown of all the backend and security changes made to 
+initialize the Study Corner MERN application.
+
+--------------------------------------------------------------------------------
+1. DEPENDENCY INITIALIZATION
+--------------------------------------------------------------------------------
+* File: server/package.json
+* Changes: Configured the backend environment to use ES Modules ("type": "module")
+  and added scripts to run the dev server ("npm run dev") using nodemon.
+* Dependencies Installed:
+  - express: Node.js web application framework.
+  - mongoose: MongoDB object modeling (ORM) tool.
+  - dotenv: Loads environment variables from a .env file.
+  - cors: Enables Cross-Origin Resource Sharing.
+  - jsonwebtoken: For creating and verifying JWT access tokens.
+  - bcryptjs: Secure hashing and verification of passwords.
+  - nodemon (devDependency): Automatically restarts node application on file changes.
+
+--------------------------------------------------------------------------------
+2. CONFIGURATION & DATABASE CONNECTION
+--------------------------------------------------------------------------------
+* File: server/.env
+  - Contains environment variables for PORT, MONGO_URI, JWT_SECRET, and NODE_ENV.
+  - Note: Port was changed to 5001 to avoid EADDRINUSE conflicts on macOS.
+* File: server/config/db.js
+  - Implements the Mongoose connection utility to connect to MongoDB.
+
+--------------------------------------------------------------------------------
+3. SECURITY CORE & MIDDLEWARE
+--------------------------------------------------------------------------------
+* File: server/middleware/authMiddleware.js
+  - protect: Verifies standard HTTP 'Authorization: Bearer <JWT_TOKEN>' headers,
+    decodes the payload, and attaches the user object to 'req.user'.
+  - admin: Validates that the logged-in user has the role 'admin' before allowing
+    them to access admin-restricted routes.
+
+--------------------------------------------------------------------------------
+4. AUTHENTICATION & VIDEO FEATURES
+--------------------------------------------------------------------------------
+* Models:
+  - server/models/User.js: User schema representing users/admins. Has pre-save
+    hook to automatically hash passwords, and a matchPassword method.
+  - server/models/Video.js: Video schema with YouTube URL format validation and
+    reference to the admin who posted it.
+* Controllers:
+  - server/controllers/authController.js: Controls registration, login (generates
+    JWTs), and user profile fetching.
+  - server/controllers/videoController.js: Controls posting videos (admin-only),
+    getting videos (public), and deleting videos (admin-only).
+* Routes:
+  - server/routes/authRoutes.js: API endpoints for user register, login, profile.
+  - server/routes/videoRoutes.js: CRUD endpoints for videos protected by middleware.
+
+--------------------------------------------------------------------------------
+5. MAIN APPLICATION ENTRY POINT
+--------------------------------------------------------------------------------
+* File: server/server.js
+  - Entry point of the Express application. Configures CORS, JSON parsing body
+    parsers, routes mapping, and a global centralized error handling middleware.
+
+--------------------------------------------------------------------------------
+RUNNING THE SERVER
+--------------------------------------------------------------------------------
+Ensure your local MongoDB instance is running (or update MONGO_URI in .env with your
+MongoDB Atlas connection string), then run:
+  
+  cd server
+  npm run dev
+
+The server is currently configured to listen on: http://localhost:5001
+================================================================================

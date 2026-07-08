@@ -1,0 +1,50 @@
+@import './tokens.css';
+
+.cat-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding-bottom: 0;
+  border-bottom: 2px solid var(--sc-line);
+  font-family: var(--sc-font-body);
+}
+
+.cat-pill {
+  position: relative;
+  padding: 0.45rem 1.1rem 0.55rem;
+  background: transparent;
+  border: 1px solid var(--sc-line);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  color: var(--sc-ink);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transform: translateY(2px);
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.cat-pill:hover {
+  transform: translateY(0);
+  background: var(--sc-paper-dark);
+}
+
+.cat-pill--active {
+  background: var(--sc-ink);
+  color: var(--sc-paper);
+  border-color: var(--sc-ink);
+  transform: translateY(0);
+}
+
+.cat-pill:focus-visible {
+  outline: 2px solid var(--sc-gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cat-pill {
+    transition: none;
+  }
+}

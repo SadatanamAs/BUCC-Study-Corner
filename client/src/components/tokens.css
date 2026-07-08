@@ -1,0 +1,26 @@
+/**
+ * tokens.css
+ * Shared design tokens for BUCC Study Corner components.
+ *
+ * Concept: a library "catalog card" system — study videos filed like
+ * index cards, category pills styled like catalog divider tabs.
+ * Palette is a cool paper + ink-navy base with a teal/gold/rust trio
+ * marking Backend/Design/Frontend so categories are colour-coded
+ * without needing extra copy.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
+
+:root {
+  --sc-ink: #1c2b39;
+  --sc-paper: #eaefe9;
+  --sc-paper-dark: #dce3da;
+  --sc-teal: #3d6e63;
+  --sc-gold: #d1a33d;
+  --sc-rust: #b4553c;
+  --sc-line: #c9c2af;
+
+  --sc-font-display: 'Fraunces', Georgia, serif;
+  --sc-font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --sc-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}

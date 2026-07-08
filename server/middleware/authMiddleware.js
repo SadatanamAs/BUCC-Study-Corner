@@ -24,14 +24,12 @@ export const protect = async (req, res, next) => {
         return res.status(401).json({ message: 'Not authorized, user not found' });
       }
 
-      next();
+      return next();
     } catch (error) {
       console.error(`Auth verification error: ${error.message}`);
       return res.status(401).json({ message: 'Not authorized, token verification failed' });
     }
-  }
-
-  if (!token) {
+  } else {
     return res.status(401).json({ message: 'Not authorized, no token provided' });
   }
 };

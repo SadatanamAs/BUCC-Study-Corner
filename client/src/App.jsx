@@ -6,7 +6,12 @@ import Dashboard from './pages/Dashboard.jsx';
 import Course from './pages/Course.jsx';
 import Admin from './pages/Admin.jsx';
 import Login from './pages/Login.jsx';
-import { clearSession, getSession, saveSession } from './lib/auth.js';
+import {
+  clearSession,
+  getSession,
+  loginWithBackend,
+  registerWithBackend,
+} from './lib/auth.js';
 
 function ProtectedRoute({ children, role }) {
   const session = getSession();
@@ -15,11 +20,11 @@ function ProtectedRoute({ children, role }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (role === 'admin' && session.role !== 'admin') {
+  if (role === 'admin' && session.user.role !== 'admin') {
     return <Navigate to="/dashboard" replace />;
   }
 
-  if (role === 'user' && !['user', 'admin'].includes(session.role)) {
+  if (role === 'user' && !['user', 'admin'].includes(session.user.role)) {
     return <Navigate to="/login" replace />;
   }
 
@@ -29,35 +34,59 @@ function ProtectedRoute({ children, role }) {
 export default function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [mode, setMode] = useState('login'); // 'login' | 'register'
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [session, setSession] = useState(getSession());
   const navigate = useNavigate();
 
-  const handleLogin = (event, userRole) => {
+  const handleSubmit = async (event, userRole) => {
     event.preventDefault();
+    setError('');
 
-    if (userRole === 'admin') {
-      if (email === 'admin@bucc.com' && password === 'studycorner') {
-        saveSession('admin');
-        setSession(getSession());
-        setError('');
-        navigate('/admin');
+    if (!email || !password) {
+      setError('Please enter both email and password.');
+      return;
+    }
+
+    if (mode === 'register' && !name) {
+      setError('Please enter your name.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Admin accounts can ONLY be created via the backend's
+      // /api/auth/upgrade-admin bootstrap endpoint (gated by
+      // ADMIN_BOOTSTRAP_TOKEN). Public registration always creates
+      // a regular user. So when the user clicks "Continue as admin"
+      // we still call /login — if their account has role='admin'
+      // they're let in, otherwise we show an error.
+      const fn = mode === 'register' ? registerWithBackend : loginWithBackend;
+      const payload =
+        mode === 'register'
+          ? { name, email, password }
+          : { email, password };
+      const result = await fn(payload);
+
+      // If the user clicked "Continue as admin" but their role isn't admin,
+      // refuse entry — this is the gate that prevents privilege escalation.
+      if (userRole === 'admin' && result.user.role !== 'admin') {
+        clearSession();
+        setError(
+          'This account does not have administrator privileges. Contact an existing admin to be promoted.'
+        );
         return;
       }
 
-      setError('Invalid admin credentials.');
-      return;
-    }
-
-    if (email && password) {
-      saveSession('user');
       setSession(getSession());
-      setError('');
-      navigate('/dashboard');
-      return;
+      navigate(userRole === 'admin' ? '/admin' : '/dashboard');
+    } catch (err) {
+      setError(err.message || 'Authentication failed.');
+    } finally {
+      setSubmitting(false);
     }
-
-    setError('Please enter both email and password.');
   };
 
   const handleLogout = () => {
@@ -93,12 +122,17 @@ export default function App() {
             path="/login"
             element={
               <Login
-                onLogin={handleLogin}
+                onSubmit={handleSubmit}
                 email={email}
                 setEmail={setEmail}
                 password={password}
                 setPassword={setPassword}
+                name={name}
+                setName={setName}
+                mode={mode}
+                setMode={setMode}
                 error={error}
+                submitting={submitting}
               />
             }
           />

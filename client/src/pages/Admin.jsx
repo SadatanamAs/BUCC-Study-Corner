@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PlusCircle, Trash2, Video, Sparkles } from 'lucide-react';
-import { getVideos } from '../lib/videos.js';
-
-const STORAGE_KEY = 'study-corner-videos';
+import { addVideo, loadVideos, removeVideo } from '../lib/videos.js';
 
 const emptyForm = {
   title: '',
@@ -18,17 +16,17 @@ export default function Admin() {
   const [videos, setVideos] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [notice, setNotice] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setVideos(parsed);
-      } catch {
-        setVideos([]);
-      }
-    }
+    let cancelled = false;
+    loadVideos().then((list) => {
+      if (!cancelled) setVideos(list);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleChange = (event) => {
@@ -37,35 +35,49 @@ export default function Admin() {
   };
 
   const topicOptions = useMemo(() => {
-    const stored = getVideos();
-    return Array.from(new Set(stored.map((video) => video.category))).sort();
-  }, []);
+    return Array.from(new Set(videos.map((video) => video.category).filter(Boolean))).sort();
+  }, [videos]);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    setError('');
+    setNotice('');
 
     if (!form.title || !form.url || !form.description) {
-      setNotice('Please fill in the title, description, and YouTube link.');
+      setError('Please fill in the title, description, and YouTube link.');
       return;
     }
 
-    const newVideo = {
-      id: `${Date.now()}`,
-      ...form,
-      duration: form.duration || 'New'
-    };
-
-    const updated = [newVideo, ...videos];
-    setVideos(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    setForm(emptyForm);
-    setNotice('Resource published to the public dashboard.');
+    setSubmitting(true);
+    try {
+      const created = await addVideo({
+        title: form.title,
+        category: form.category,
+        description: form.description,
+        duration: form.duration,
+        instructor: form.instructor,
+        url: form.url,
+      });
+      setVideos((current) => [created, ...current]);
+      setForm(emptyForm);
+      setNotice('Resource published to the public dashboard.');
+    } catch (err) {
+      setError(err.message || 'Failed to publish resource.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleRemove = (id) => {
-    const updated = videos.filter((video) => video.id !== id);
-    setVideos(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  const handleRemove = async (id) => {
+    setError('');
+    setNotice('');
+    try {
+      await removeVideo(id);
+      setVideos((current) => current.filter((video) => video.id !== id));
+      setNotice('Resource removed.');
+    } catch (err) {
+      setError(err.message || 'Failed to remove resource.');
+    }
   };
 
   return (
@@ -123,11 +135,16 @@ export default function Admin() {
             <input name="url" value={form.url} onChange={handleChange} placeholder="https://www.youtube.com/watch?v=..." className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-500" />
 
             <div className="flex flex-wrap items-center gap-3">
-              <button type="submit" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-indigo-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:opacity-90">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-indigo-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
                 <Sparkles className="h-4 w-4" />
-                Publish resource
+                {submitting ? 'Publishing…' : 'Publish resource'}
               </button>
               {notice ? <p className="text-sm text-cyan-300">{notice}</p> : null}
+              {error ? <p className="text-sm text-rose-300">{error}</p> : null}
             </div>
           </form>
         </div>

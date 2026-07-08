@@ -4,8 +4,11 @@ import Category from '../components/Category.jsx';
 import VideoCard from '../components/VideoCard.jsx';
 import PlayerOverlay from '../components/PlayerOverlay.jsx';
 import { loadVideos } from '../lib/videos.js';
+import { getSession } from '../lib/auth.js';
 
 export default function Dashboard() {
+  const session = getSession();
+  const isAdmin = session?.user?.role === 'admin';
   const [videos, setVideos] = useState([]);
   const [search, setSearch] = useState('');
   const [topicSearch, setTopicSearch] = useState('');
@@ -94,10 +97,12 @@ export default function Dashboard() {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <a href="/admin" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-indigo-500 px-5 py-3 text-sm font-semibold text-slate-950 transition duration-300 hover:opacity-90 glow-hover">
-              Publish new resource
-              <ArrowRight className="h-4 w-4" />
-            </a>
+            {isAdmin && (
+              <a href="/admin" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-indigo-500 px-5 py-3 text-sm font-semibold text-slate-950 transition duration-300 hover:opacity-90 glow-hover">
+                Publish new resource
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            )}
             <a href="#library" className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-cyan-400/30 hover:text-cyan-200">
               Browse library
             </a>

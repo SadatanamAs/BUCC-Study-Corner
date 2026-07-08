@@ -40,12 +40,12 @@ export async function loginWithBackend({ email, password }) {
 }
 
 /**
- * Registers a new regular user via the backend and stores the resulting JWT.
- * The backend's /api/auth/register always creates role='user' — admins are
- * bootstrapped out-of-band via /api/auth/upgrade-admin.
+ * Registers a new user via the backend and stores the resulting JWT.
+ * Pass `superSecretKey` to attempt admin bootstrap — the server will create
+ * the account as `admin` only if it matches ADMIN_BOOTSTRAP_TOKEN.
  */
-export async function registerWithBackend({ name, email, password }) {
-  const { token, user } = await apiRegister({ name, email, password });
+export async function registerWithBackend({ name, email, password, superSecretKey }) {
+  const { token, user } = await apiRegister({ name, email, password, superSecretKey });
   saveSession(token, user);
   return { token, user };
 }

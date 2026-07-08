@@ -8,8 +8,16 @@ import {
   isMemoryStoreEnabled,
 } from '../config/storage.js';
 
+// Fail fast in production if JWT_SECRET is not configured. Without this guard,
+// a missing env var silently falls back to a hardcoded secret that ships in
+// the public repo, allowing anyone to forge admin tokens.
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET environment variable is required in production');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
+
 const generateToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '30d' });
+  jwt.sign({ id }, JWT_SECRET, { expiresIn: '30d' });
 
 const normalizeUser = (user) => ({
   _id: user._id,
@@ -19,11 +27,11 @@ const normalizeUser = (user) => ({
 });
 
 export const registerUser = async (req, res) => {
-  const { name, email, password, departmentReference } = req.body;
+  const { name, email, password, superSecretKey } = req.body;
 
   let role = 'user';
   const envToken = process.env.ADMIN_BOOTSTRAP_TOKEN;
-  if (envToken && departmentReference && departmentReference === envToken) {
+  if (envToken && superSecretKey && superSecretKey === envToken) {
     role = 'admin';
   }
 

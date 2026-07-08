@@ -17,10 +17,22 @@ await connectDB();
 const app = express();
 
 // Middleware
+// CORS: the API authenticates via the `Authorization: Bearer <jwt>` header,
+// not cookies. So `credentials: true` is unnecessary and combining it with
+// `origin: '*'` is forbidden by the CORS spec — browsers would reject every
+// credentialed cross-origin request.
+// Configure CLIENT_ORIGIN to the deployed frontend URL (comma-separated list
+// is supported). If unset in development, '*' is allowed but credentials
+// stay disabled.
+const allowedOrigins = (process.env.CLIENT_ORIGIN || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN || '*',
-    credentials: true,
+    origin: allowedOrigins.length ? allowedOrigins : '*',
+    credentials: false,
   })
 );
 app.use(express.json());

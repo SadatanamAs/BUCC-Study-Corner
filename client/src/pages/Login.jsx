@@ -14,18 +14,26 @@ const Login = ({
   setMode,
   error,
   submitting,
+  desiredRole = 'user',
 }) => {
   const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     if (onSubmit) {
-      onSubmit(e, 'user');
+      // Pass the form event to the parent; the parent decides what role the
+      // user is trying to access via the URL (?role=admin) rather than this
+      // hardcoded string. Keeping this a passthrough avoids the previous bug
+      // where the admin link on the landing page could never produce an admin
+      // account.
+      onSubmit(e);
       return;
     }
 
     e.preventDefault();
     navigate('/dashboard');
   };
+
+  const isAdminEntry = desiredRole === 'admin';
 
   return (
     <div className="min-h-screen bg-[#090814] bg-[radial-gradient(#1a182e_1.5px,transparent_1.5px)] [background-size:24px_24px] flex flex-col items-center justify-center p-4 font-sans text-white selection:bg-[#f3d371] selection:text-[#090814]">
@@ -51,10 +59,12 @@ const Login = ({
               <ShieldCheck size={24} />
             </div>
             <h1 className="text-3xl font-black tracking-tighter text-white drop-shadow-md">
-              ADMIN ACCESS
+              {isAdminEntry ? 'ADMIN ACCESS' : 'WELCOME BACK'}
             </h1>
             <p className="text-gray-400 text-[11px] font-bold mt-2 tracking-[0.2em] uppercase">
-              Authenticate internal administrative systems.
+              {isAdminEntry
+                ? 'Authenticate internal administrative systems.'
+                : 'Sign in to your learner workspace.'}
             </p>
           </div>
 

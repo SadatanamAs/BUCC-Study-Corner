@@ -20,10 +20,11 @@ export default function Dashboard() {
     loadVideos().then((list) => {
       if (!cancelled) setVideos(list);
     });
+    // JSON.parse(null) yields null; defensive defaults prevent downstream .includes() crashes.
     const storedFavorites = JSON.parse(localStorage.getItem('bucc-favorites') || '[]');
-    setFavorites(storedFavorites);
+    setFavorites(Array.isArray(storedFavorites) ? storedFavorites : []);
     const storedTopicFavorites = JSON.parse(localStorage.getItem('bucc-topic-favorites') || '[]');
-    setTopicFavorites(storedTopicFavorites);
+    setTopicFavorites(Array.isArray(storedTopicFavorites) ? storedTopicFavorites : []);
     return () => {
       cancelled = true;
     };
@@ -68,14 +69,11 @@ export default function Dashboard() {
   }, [categories, topicQuery]);
 
   const filteredVideos = useMemo(() => {
+    const query = search.toLowerCase();
     return videos.filter((video) => {
       const matchesCategory = activeCategory === 'All' || video.category === activeCategory;
-      const query = search.toLowerCase();
-      const matchesSearch =
-        video.title.toLowerCase().includes(query) ||
-        video.description.toLowerCase().includes(query) ||
-        video.instructor.toLowerCase().includes(query);
-
+      const haystack = `${video.title || ''} ${video.description || ''} ${video.instructor || ''}`.toLowerCase();
+      const matchesSearch = haystack.includes(query);
       return matchesCategory && matchesSearch;
     });
   }, [activeCategory, search, videos]);

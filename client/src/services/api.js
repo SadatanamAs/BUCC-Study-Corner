@@ -6,11 +6,14 @@
  *
  * Public surface:
  *   - loginUser({ email, password }) → { token, user }
- *   - registerUser({ name, email, password }) → { token, user }
+ *   - registerUser({ name, email, password, superSecretKey? }) → { token, user }
  *   - fetchVideos() → Video[]
  *   - createVideo(video) → Video
  *   - deleteVideo(id) → { message }
- *   - upgradeToAdmin({ email, bootstrapToken }) → { message, user }
+ *
+ * Admin bootstrap is done at registration time by passing the matching
+ * `superSecretKey` value — see registerUser in authController.js. There
+ * is no separate upgrade-admin endpoint.
  *
  * Token handling: callers (auth.js, components) are responsible for
  * storing the JWT in localStorage. This module injects it via the
@@ -68,10 +71,16 @@ export async function loginUser({ email, password }) {
   };
 }
 
-export async function registerUser({ name, email, password }) {
+export async function registerUser({ name, email, password, superSecretKey }) {
+  const body = { name, email, password };
+  // The backend only treats the field as admin-bootstrap when it matches
+  // ADMIN_BOOTSTRAP_TOKEN. Sending an empty string would fail the equality
+  // check on the server, so we omit the key entirely when not provided.
+  if (superSecretKey) body.superSecretKey = superSecretKey;
+
   const data = await request('/auth/register', {
     method: 'POST',
-    body: { name, email, password },
+    body,
   });
   return {
     token: data.token,
@@ -110,17 +119,6 @@ export async function createVideo(video, token) {
 
 export async function deleteVideo(id, token) {
   return request(`/videos/${id}`, { method: 'DELETE', token });
-}
-
-export async function upgradeToAdmin({ email, bootstrapToken }) {
-  return request('/auth/upgrade-admin', {
-    method: 'POST',
-    body: { email },
-    headers: {
-      'Content-Type': 'application/json',
-      'x-admin-bootstrap-token': bootstrapToken,
-    },
-  });
 }
 
 // -------- helpers --------

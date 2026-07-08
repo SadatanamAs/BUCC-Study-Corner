@@ -2,10 +2,15 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { findMemoryUserById, isMemoryStoreEnabled } from '../config/storage.js';
 
+// Mirror the production guard from authController. Keep these in sync.
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET environment variable is required in production');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
+
 // Protect routes - Verify JWT token
 export const protect = async (req, res, next) => {
   let token;
-  const jwtSecret = process.env.JWT_SECRET || 'dev-secret';
 
   // Check for token in Authorization header (Bearer token)
   if (
@@ -17,7 +22,7 @@ export const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
 
       // Verify token
-      const decoded = jwt.verify(token, jwtSecret);
+      const decoded = jwt.verify(token, JWT_SECRET);
 
       if (isMemoryStoreEnabled()) {
         req.user = await findMemoryUserById(decoded.id);

@@ -109,7 +109,7 @@ All requests should be prefixed with the server's base URL (e.g., `http://localh
 
 | Method | Endpoint | Access | Description | Request Body Payload |
 | :--- | :--- | :--- | :--- | :--- |
-| **POST** | `/api/auth/register` | Public | Register a new user account | `{ "name": "...", "email": "...", "password": "...", "departmentReference": "?" }` — `departmentReference` is optional; if it matches the server's `ADMIN_BOOTSTRAP_TOKEN` env var, the account is created as `admin`, otherwise as `user`. |
+| **POST** | `/api/auth/register` | Public | Register a new user account | `{ "name": "...", "email": "...", "password": "...", "superSecretKey": "?" }` — `superSecretKey` is optional; if it matches the server's `ADMIN_BOOTSTRAP_TOKEN` env var, the account is created as `admin`, otherwise as `user`. |
 | **POST** | `/api/auth/login` | Public | Authenticate user & retrieve JWT | `{ "email": "...", "password": "..." }` |
 | **GET** | `/api/auth/profile` | Private (User) | Retrieve authenticated user profile | *Requires Bearer Token* |
 
@@ -126,7 +126,7 @@ All requests should be prefixed with the server's base URL (e.g., `http://localh
 
 ## 🛡 Creating the First Admin
 
-Public registration always creates a `user` account — unless the request includes an optional `departmentReference` field whose value matches the server's `ADMIN_BOOTSTRAP_TOKEN` env var. In that case, the account is created as `admin` directly.
+Public registration always creates a `user` account — unless the request includes an optional `superSecretKey` field whose value matches the server's `ADMIN_BOOTSTRAP_TOKEN` env var. In that case, the account is created as `admin` directly.
 
 ### Setup
 
@@ -135,10 +135,11 @@ Public registration always creates a `user` account — unless the request inclu
    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    ```
 2. Set `ADMIN_BOOTSTRAP_TOKEN` to that value in `server/.env` (local) **or** in the backend Vercel project's Environment Variables (prod). Redeploy if you change it on Vercel — env vars need a fresh build to take effect.
+3. (Optional) For the deployed **frontend** to perform admin bootstrap via its own UI form (i.e. `/login?role=admin` → Register), set a build-time variable on the frontend Vercel project called `VITE_ADMIN_BOOTSTRAP_KEY` to the same value. If you don't set this, the UI can still authenticate as an existing admin but cannot create new admins — they must be registered via curl.
 
 ### Self-service signup
 
-The future admin just signs up and supplies the secret in the optional `departmentReference` field:
+The future admin just signs up and supplies the secret in the optional `superSecretKey` field:
 
 ```bash
 curl -X POST https://<your-server>.vercel.app/api/auth/register \
@@ -147,17 +148,17 @@ curl -X POST https://<your-server>.vercel.app/api/auth/register \
     "name": "Admin User",
     "email": "admin@bucc.com",
     "password": "a-strong-password",
-    "departmentReference": "<paste the secret here>"
+    "superSecretKey": "<paste the secret here>"
   }'
 ```
 
-If `departmentReference` matches the server's `ADMIN_BOOTSTRAP_TOKEN`, the response includes `"role": "admin"`. Otherwise it includes `"role": "user"`. The server never reveals whether the reference was wrong — it silently creates a regular user.
+If `superSecretKey` matches the server's `ADMIN_BOOTSTRAP_TOKEN`, the response includes `"role": "admin"`. Otherwise it includes `"role": "user"`. The server never reveals whether the key was wrong — it silently creates a regular user.
 
 The admin can now sign in at `/login?role=admin` and access `/admin` plus the protected `POST /api/videos` / `DELETE /api/videos/:id` endpoints.
 
 ### Locking it down
 
-To permanently stop new admins from being created via signup, delete `ADMIN_BOOTSTRAP_TOKEN` from the server's env vars and redeploy. With the env var unset, signup always creates `user` accounts — even when a `departmentReference` is supplied.
+To permanently stop new admins from being created via signup, delete `ADMIN_BOOTSTRAP_TOKEN` from the server's env vars and redeploy. With the env var unset, signup always creates `user` accounts — even when a `superSecretKey` is supplied.
 
 ---
 

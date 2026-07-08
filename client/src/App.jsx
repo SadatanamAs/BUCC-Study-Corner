@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import Landing from './pages/Landing.jsx';
 import Dashboard from './pages/Dashboard.jsx';
@@ -31,6 +31,11 @@ function ProtectedRoute({ children, role }) {
   return children;
 }
 
+// Place this in a build-time env var (Vercel: VITE_ADMIN_BOOTSTRAP_KEY) when
+// the deployment is for internal BUCC use. Leaving it unset disables the UI
+// admin bootstrap — admins must register via curl with the matching token.
+const BOOTSTRAP_KEY = import.meta.env?.VITE_ADMIN_BOOTSTRAP_KEY || '';
+
 export default function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,8 +45,11 @@ export default function App() {
   const [submitting, setSubmitting] = useState(false);
   const [session, setSession] = useState(getSession());
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Landing links visit `/login?role=admin` and `/login?role=user`. Default to 'user'.
+  const desiredRole = searchParams.get('role') === 'admin' ? 'admin' : 'user';
 
-  const handleSubmit = async (event, userRole) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
 
@@ -57,31 +65,44 @@ export default function App() {
 
     setSubmitting(true);
     try {
-      // Admin accounts can ONLY be created via the backend's
-      // /api/auth/upgrade-admin bootstrap endpoint (gated by
-      // ADMIN_BOOTSTRAP_TOKEN). Public registration always creates
-      // a regular user. So when the user clicks "Continue as admin"
-      // we still call /login — if their account has role='admin'
-      // they're let in, otherwise we show an error.
-      const fn = mode === 'register' ? registerWithBackend : loginWithBackend;
-      const payload =
-        mode === 'register'
-          ? { name, email, password }
-          : { email, password };
-      const result = await fn(payload);
+      if (mode === 'register') {
+        // Only forward the bootstrap key when the user explicitly chose the
+        // admin path *and* an operator configured VITE_ADMIN_BOOTSTRAP_KEY for
+        // this deployment. This way the bootstrap token never appears in the
+        // public bundle for a learner-facing deployment.
+        let superSecretKey;
+        if (desiredRole === 'admin' && BOOTSTRAP_KEY) {
+          superSecretKey = BOOTSTRAP_KEY;
+        }
 
-      // If the user clicked "Continue as admin" but their role isn't admin,
-      // refuse entry — this is the gate that prevents privilege escalation.
-      if (userRole === 'admin' && result.user.role !== 'admin') {
-        clearSession();
-        setError(
-          'This account does not have administrator privileges. Contact an existing admin to be promoted.'
-        );
+        const result = await registerWithBackend({ name, email, password, superSecretKey });
+
+        if (desiredRole === 'admin' && result.user.role !== 'admin') {
+          clearSession();
+          setError(
+            'This account was created as a regular user. The admin bootstrap key is not configured for this deployment — contact an existing admin.'
+          );
+          return;
+        }
+
+        setSession(getSession());
+        navigate(result.user.role === 'admin' ? '/admin' : '/dashboard');
+        return;
+      }
+
+      // Login flow.
+      const result = await loginWithBackend({ email, password });
+
+      // Gate the admin workspace: a regular user who follows the "Continue as
+      // admin" link just gets refused and lands on /dashboard.
+      if (desiredRole === 'admin' && result.user.role !== 'admin') {
+        setSession(getSession());
+        navigate('/dashboard');
         return;
       }
 
       setSession(getSession());
-      navigate(userRole === 'admin' ? '/admin' : '/dashboard');
+      navigate(result.user.role === 'admin' ? '/admin' : '/dashboard');
     } catch (err) {
       setError(err.message || 'Authentication failed.');
     } finally {
@@ -92,6 +113,12 @@ export default function App() {
   const handleLogout = () => {
     clearSession();
     setSession(null);
+    // Clear form state so the next visitor doesn't see the previous user's
+    // email pre-filled in plaintext.
+    setEmail('');
+    setPassword('');
+    setName('');
+    setError('');
     navigate('/');
   };
 
@@ -133,6 +160,7 @@ export default function App() {
                 setMode={setMode}
                 error={error}
                 submitting={submitting}
+                desiredRole={desiredRole}
               />
             }
           />

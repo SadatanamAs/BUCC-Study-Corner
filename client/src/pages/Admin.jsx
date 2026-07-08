@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Trash2, Wrench, PlusCircle, ArrowUpRight, FolderOpen, Radio, Database } from 'lucide-react';
-import { addVideo, loadVideos, removeVideo } from '../lib/videos.js';
+import { addVideo, getYouTubeId, loadVideos, removeVideo } from '../lib/videos.js';
 
 const Admin = () => {
   const [videos, setVideos] = useState([]);
@@ -11,6 +11,7 @@ const Admin = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
+  const successTimer = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -20,21 +21,16 @@ const Admin = () => {
       setVideos(list.map((video) => ({
         ...video,
         id: video.id ?? video._id,
-        youtubeId: video.youtubeId || extractYouTubeId(video.url || ''),
+        youtubeId: video.youtubeId || getYouTubeId(video.url || ''),
         publishedDate: formatPublishedDate(video.createdAt || video.publishedDate),
       })));
     });
 
     return () => {
       cancelled = true;
+      if (successTimer.current) clearTimeout(successTimer.current);
     };
   }, []);
-
-  const extractYouTubeId = (urlStr) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = urlStr.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-  };
 
   const formatPublishedDate = (value) => {
     if (!value) {
@@ -45,7 +41,9 @@ const Admin = () => {
       });
     }
 
-    return new Date(value).toLocaleDateString('en-GB', {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Unknown';
+    return date.toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -62,7 +60,7 @@ const Admin = () => {
       return;
     }
 
-    const ytId = extractYouTubeId(url);
+    const ytId = getYouTubeId(url.trim());
     if (!ytId) {
       setError('⚡ INVALID ROUTING SIGNATURE: CORRUPT LINK STRUCTURE.');
       return;
@@ -73,7 +71,7 @@ const Admin = () => {
     try {
       const newVideo = await addVideo({
         title: title.trim(),
-        url,
+        url: url.trim(),
         category: 'General',
       });
 
@@ -88,7 +86,8 @@ const Admin = () => {
       setTitle('');
       setUrl('');
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 4000);
+      if (successTimer.current) clearTimeout(successTimer.current);
+      successTimer.current = setTimeout(() => setSuccess(false), 4000);
     } catch (err) {
       setError(err.message || 'Unable to publish the resource right now.');
     } finally {
@@ -256,11 +255,17 @@ const Admin = () => {
                         <tr key={video.id} className="group/row hover:bg-[#090814]/60 transition-all duration-200">
                           <td className="py-4 pr-4 pl-1">
                             <div className="w-24 aspect-video rounded-xl overflow-hidden border-2 border-[#2b2a42] relative bg-[#090814] shadow-md ring-1 ring-white/5 transition-transform duration-300 group-hover/row:scale-105 group-hover/row:border-[#7c83fd]">
-                              <img 
-                                src={`https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`} 
-                                alt="Thumbnail"
-                                className="w-full h-full object-cover select-none pointer-events-none"
-                              />
+                              {video.youtubeId ? (
+                                <img
+                                  src={`https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`}
+                                  alt={video.title || 'Thumbnail'}
+                                  className="w-full h-full object-cover select-none pointer-events-none"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[#5ce1e6] text-[10px] font-mono uppercase tracking-widest">
+                                  no preview
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td className="py-4 px-4">

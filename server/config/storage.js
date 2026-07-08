@@ -2,38 +2,24 @@ import bcrypt from 'bcryptjs';
 
 const memoryUsers = [];
 const memoryVideos = [];
-let seeded = false;
 
 function createId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// No seed data: previously the in-memory store shipped with a hardcoded
+// admin@bucc.edu / admin123 login. Anyone who deployed without configuring
+// MONGO_URI could log in with those credentials. The store is now empty
+// until users explicitly create accounts through the API.
 async function ensureSeedData() {
-  if (seeded) return;
-  seeded = true;
-
-  memoryUsers.push({
-    _id: createId('user'),
-    name: 'Admin User',
-    email: 'admin@bucc.edu',
-    password: await bcrypt.hash('admin123', 10),
-    role: 'admin',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  });
-
-  memoryVideos.push({
-    _id: createId('video'),
-    title: 'React Basics',
-    youtubeId: 'SqcY0GlETPk',
-    category: 'Frontend',
-    tags: ['react', 'frontend'],
-    postedBy: memoryUsers[0]._id,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  });
+  // intentionally empty — callers fall through to empty arrays
 }
 
+/**
+ * Returns true when no MONGO_URI is configured. Only intended for local
+ * development — controllers must short-circuit if this is true, and the
+ * server fails fast at startup in production when MONGO_URI is missing.
+ */
 export function isMemoryStoreEnabled() {
   return !process.env.MONGO_URI;
 }

@@ -8,12 +8,6 @@ import videoRoutes from './routes/videoRoutes.js';
 // Load environment variables
 dotenv.config();
 
-// Connect to MongoDB. We `await` here at module-load time so that no
-// incoming request can reach a controller before the connection is ready.
-// On Vercel's serverless platform, the function module is imported once
-// per cold start; awaiting here is the safe place to block.
-await connectDB();
-
 const app = express();
 
 // Middleware
@@ -37,6 +31,24 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Ensure the MongoDB connection is ready before any controller runs.
+// On Vercel serverless the function module is loaded once per cold start;
+// awaiting at module-load was hitting the 10s function-execution cap during
+// the first cold request. Instead we lazily connect on the first request and
+// reuse the cached connection on every subsequent request via the global
+// `cached` object in config/db.js.
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error(`Database connection failed: ${err.message}`);
+    res.status(503).json({
+      message: 'Database temporarily unavailable. Please retry.',
+    });
+  }
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
